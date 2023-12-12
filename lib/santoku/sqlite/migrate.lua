@@ -1,7 +1,7 @@
 local err = require("santoku.err")
 local gen = require("santoku.gen")
 local op = require("santoku.op")
-local tup = require("santoku.tup")
+local tup = require("santoku.tuple")
 local fs = require("santoku.fs")
 local str = require("santoku.string")
 
