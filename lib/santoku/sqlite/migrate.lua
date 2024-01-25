@@ -1,4 +1,4 @@
-local err = require("santoku.err")
+local check = require("santoku.check")
 local gen = require("santoku.gen")
 local op = require("santoku.op")
 local tup = require("santoku.tuple")
@@ -8,7 +8,7 @@ local str = require("santoku.string")
 local M = {}
 
 M.migrate = function (db, opts)
-  return err.pwrap(function (check)
+  return check:wrap(function (check)
 
     local files
 
