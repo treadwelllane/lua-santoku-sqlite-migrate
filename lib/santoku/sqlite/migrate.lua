@@ -1,63 +1,60 @@
-local check = require("santoku.check")
-local gen = require("santoku.gen")
-local op = require("santoku.op")
-local tup = require("santoku.tuple")
+local arr = require("santoku.array")
+local amap = arr.map
+local asort = arr.sort
+
 local fs = require("santoku.fs")
+local basename = fs.basename
+local readfile = fs.readfile
+local files = fs.files
+
 local str = require("santoku.string")
+local scmp = str.compare
 
-local M = {}
+local iter = require("santoku.iter")
+local collect = iter.collect
+local filter = iter.filter
+local ivals = iter.ivals
+local keys = iter.keys
 
-M.migrate = function (db, opts)
-  return check:wrap(function (check)
+return function (db, opts)
 
-    local files
+  local migrations
 
-    if type(opts) == "string" then
+  if type(opts) == "string" then
 
-      local fp = opts
-      files = fs.files(fp):map(check):vec():sort(str.compare):map(function (fp)
-        return tup(fs.basename(fp), function ()
-          return check(fs.readfile(fp))
-        end)
-      end)
-
-    elseif type(opts) == "table" then
-
-      local tbl = opts
-      files = gen.keys(tbl):vec():sort(str.compare):map(function (fp)
-        return tup(fs.basename(fp), function ()
-          return opts[fp]
-        end)
-      end)
-
-    else
-      return false, "invalid argument type to migrate: " .. type(opts)
-    end
-
-    check(db:begin())
-
-    check(db:exec([[
-      create table if not exists migrations (
-        id integer primary key,
-        filename text not null
-      );
-    ]]))
-
-    local get_migration = check(db:getter("select id from migrations where filename = ?", "id"))
-    local add_migration = check(db:inserter("insert into migrations (filename) values (?)"))
-
-    gen.ivals(files):map(op.call):filter(function (fp)
-      return not check(get_migration(fp))
-    end):map(function (fp, read)
-      return fp, read()
-    end):each(function (fp, data)
-      check(db:exec(data))
-      check(add_migration(fp))
+    migrations = amap(asort(collect(files(opts, true)), scmp), function (fp)
+      return { name = basename(fp), data = function () return readfile(fp) end }
     end)
 
-    check(db:commit())
+  elseif type(opts) == "table" then
 
-  end)
+    migrations = amap(asort(collect(keys(opts)), scmp), function (fp)
+      return { name = basename(fp), data = function () return opts[fp] end }
+    end)
+
+  else
+    error("invalid argument type to migrate: ", type(opts))
+  end
+
+  db.begin()
+
+  db.exec([[
+    create table if not exists migrations (
+      id integer primary key,
+      filename text not null
+    );
+  ]])
+
+  local get_migration = db.getter("select id from migrations where filename = ?", "id")
+  local add_migration = db.inserter("insert into migrations (filename) values (?)")
+
+  for rec in filter(function (fp)
+    return not get_migration(fp)
+  end, ivals(migrations)) do
+    db.exec(rec.data())
+    add_migration(rec.name)
+  end
+
+  db.commit()
+
 end
-
-return M
