@@ -36,25 +36,25 @@ return function (db, opts)
     error("invalid argument type to migrate: ", type(opts))
   end
 
-  db.begin()
+  db.transaction(function ()
 
-  db.exec([[
-    create table if not exists migrations (
-      id integer primary key,
-      filename text not null
-    );
-  ]])
+    db.exec([[
+      create table if not exists migrations (
+        id integer primary key,
+        filename text not null
+      );
+    ]])
 
-  local get_migration = db.getter("select id from migrations where filename = ?", "id")
-  local add_migration = db.inserter("insert into migrations (filename) values (?)")
+    local get_migration = db.getter("select id from migrations where filename = ?", "id")
+    local add_migration = db.inserter("insert into migrations (filename) values (?)")
 
-  for rec in filter(function (rec)
-    return not get_migration(rec.name)
-  end, ivals(migrations)) do
-    db.exec(rec.data())
-    add_migration(rec.name)
-  end
+    for rec in filter(function (rec)
+      return not get_migration(rec.name)
+    end, ivals(migrations)) do
+      db.exec(rec.data())
+      add_migration(rec.name)
+    end
 
-  db.commit()
+  end)
 
 end
