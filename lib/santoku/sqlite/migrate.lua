@@ -2,11 +2,6 @@ local arr = require("santoku.array")
 local amap = arr.map
 local asort = arr.sort
 
-local fs = require("santoku.fs")
-local basename = fs.basename
-local readfile = fs.readfile
-local files = fs.files
-
 local str = require("santoku.string")
 local scmp = str.compare
 
@@ -16,25 +11,13 @@ local filter = iter.filter
 local ivals = iter.ivals
 local keys = iter.keys
 
-return function (db, opts)
+return function (db, migrations)
 
-  local migrations
+  assert(type(migrations) == "table", "migrations must be a table")
 
-  if type(opts) == "string" then
-
-    migrations = amap(asort(collect(files(opts, true)), scmp), function (fp)
-      return { name = basename(fp), data = function () return readfile(fp) end }
-    end)
-
-  elseif type(opts) == "table" then
-
-    migrations = amap(asort(collect(keys(opts)), scmp), function (fp)
-      return { name = basename(fp), data = function () return opts[fp] end }
-    end)
-
-  else
-    error("invalid argument type to migrate: ", type(opts))
-  end
+  local sorted = amap(asort(collect(keys(migrations)), scmp), function (name)
+    return { name = name, data = migrations[name] }
+  end)
 
   db.transaction(function ()
 
@@ -50,8 +33,8 @@ return function (db, opts)
 
     for rec in filter(function (rec)
       return not get_migration(rec.name)
-    end, ivals(migrations)) do
-      db.exec(rec.data())
+    end, ivals(sorted)) do
+      db.exec(rec.data)
       add_migration(rec.name)
     end
 
