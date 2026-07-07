@@ -8,6 +8,11 @@ local env = {
     "lua == 5.1",
     "santoku >= 0.0.328-1",
   },
+  test = {
+    dependencies = {
+      "santoku-sqlite >= 0.0.42-1",
+    },
+  },
 }
 
 env.homepage = "https://github.com/birchpointswe/lua-" .. env.name

@@ -1,66 +1,67 @@
-# Santoku SQLite Migrate
+# santoku-sqlite-migrate
 
-Database migration management for SQLite databases.
+Versioned, idempotent SQL migrations for a santoku-sqlite database handle. A single
+callable module: pass it a DB handle and a table of named migrations, and it applies the
+ones that have not run yet, in version order, inside one transaction.
 
-## Module Reference
+This README is a usage guide, not an API reference. The test is the spec:
+`test/spec/santoku/sqlite/migrate.lua` exercises the full surface (ordering, idempotence,
+rollback, validation).
 
-### `santoku.sqlite.migrate`
+## Dependencies
 
-| Function | Arguments | Returns | Description |
-|----------|-----------|---------|-------------|
-| `migrate` | `db, opts` | `nil` | Applies migrations to database |
+- Base `santoku` (runtime): see [../lua-santoku/README.md](../lua-santoku/README.md).
+- `santoku-sqlite` (tests, and to obtain a DB handle): see
+  [../lua-santoku-sqlite/README.md](../lua-santoku-sqlite/README.md). The handle's
+  `transaction`, `exec`, `getter`, and `inserter` methods are documented there; this module
+  does not re-expose them.
 
-**Parameters:**
-- `db`: Database connection with `transaction`, `exec`, `getter`, `inserter` methods
-- `opts`: Migration source - directory path (string) or migration table (table)
+## The module
 
-**Behavior:**
-- Creates `migrations` table if not exists
-- Processes migrations alphabetically by filename
-- Skips already-applied migrations
-- Runs within database transaction
-- Throws error on failure
+`require("santoku.sqlite.migrate")` returns one function:
 
-**Migration tracking table:**
-```sql
-CREATE TABLE migrations (
-  id INTEGER PRIMARY KEY,
-  filename TEXT NOT NULL
-)
-```
+    migrate(db, migrations)
 
-**Directory structure:**
-- Files processed alphabetically by name
-- Each file contains SQL statements to execute
-- Example: `001_users.sql`, `002_posts.sql`, `003_indexes.sql`
+- `db`: a santoku-sqlite handle.
+- `migrations`: a table mapping a name (string key) to a SQL string (value). Non-table
+  values raise.
 
-**Table structure:**
-- Keys: migration filenames (processed alphabetically)
-- Values: SQL statements to execute or functions returning SQL
-- Example: `{["001_users.sql"] = "CREATE TABLE ...", ["002_posts.sql"] = function() return "ALTER TABLE ..." end}`
+Behaviour:
 
-### Directory-based usage
+- Ensures a `migrations(id integer primary key, filename text not null)` bookkeeping table.
+- Sorts keys with a version-aware comparator: numeric runs compare as numbers, so
+  `0.0.2` < `0.0.10` < `0.1.0`, not lexically.
+- Skips any name already recorded in `migrations`, applies the rest, records each as it runs.
+- Runs the whole batch in one `db.transaction`: a failure rolls back every change from that
+  call, including the bookkeeping rows.
+
+Re-running with the same table is a no-op; adding a new key applies only the new entry.
+
+## Usage
+
 ```lua
-local sqlite = require("lsqlite3")
 local sql = require("santoku.sqlite")
+local sqlite = require("santoku.sqlite.db")
 local migrate = require("santoku.sqlite.migrate")
 
-local db = sql(sqlite.open("app.db"))
-migrate(db, "./migrations")
-```
+local db = sql(sqlite.open_memory())
 
-### Table-based usage
-```lua
-local sqlite = require("lsqlite3")
-local sql = require("santoku.sqlite")
-local migrate = require("santoku.sqlite.migrate")
-
-local db = sql(sqlite.open("app.db"))
 migrate(db, {
-  ["001_init.sql"] = "CREATE TABLE users (id INTEGER PRIMARY KEY)",
-  ["002_posts.sql"] = "CREATE TABLE posts (id INTEGER PRIMARY KEY)"
+  ["0.0.1"] = "create table a (x);",
+  ["0.0.2"] = "create table b (y);",
 })
+
+-- both applied and recorded; a second migrate(db, ...) with the same keys does nothing
+local names = db.all("select filename from migrations order by id", true)()
+-- { { filename = "0.0.1" }, { filename = "0.0.2" } }
 ```
+
+Covers: `test/spec/santoku/sqlite/migrate.lua`.
+
+## Building / testing
+
+This repo uses the `toku` build harness. The spec under `test/spec/santoku/` requires
+`santoku-sqlite`; run the suite through `toku` so that dependency is on the path.
 
 ## License
 
