@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://santoku.dev/logo.png" width="96" height="96" alt="santoku">
+  <img src="https://santoku.dev/logo-santoku-sqlite-migrate.png" height="64" alt="santoku-sqlite-migrate">
 </p>
 
 # santoku-sqlite-migrate
