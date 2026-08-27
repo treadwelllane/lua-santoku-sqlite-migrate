@@ -36,6 +36,9 @@ Run it again and nothing happens. Add `0.0.3` and only that one runs.
 Runnable examples and the full API:
 [santoku.dev](https://santoku.dev/#santoku-sqlite-migrate).
 
+For agents and LLM tooling: [llms.txt](https://santoku.dev/llms.txt) for the index,
+[llms-full.txt](https://santoku.dev/llms-full.txt) for every documented example.
+
 ## Tests
 
 The tests are the spec. For the exhaustive surface (ordering, idempotence, rollback,
