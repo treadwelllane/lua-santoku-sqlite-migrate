@@ -1,54 +1,3 @@
-<p align="center">
-  <img src="https://santoku.dev/logo.png" width="96" height="96" alt="santoku">
-</p>
-
-# santoku-sqlite-migrate
-
-Versioned, idempotent SQL migrations for a santoku-sqlite database handle. One callable
-module: give it a handle and a table of named migrations, and it applies the ones that
-have not run yet, in version order, forward only, inside a single transaction.
-
-## Install
-
-```sh
-luarocks install santoku-sqlite-migrate
-```
-
-## Example
-
-```lua
-local sqlite = require("santoku.sqlite.db")
-local sql = require("santoku.sqlite")
-local migrate = require("santoku.sqlite.migrate")
-
-local db = sql(sqlite.open_memory())
-
-migrate(db, {
-  ["0.0.1"] = "create table todo (id integer primary key, title text);",
-  ["0.0.2"] = "alter table todo add column done integer default 0;",
-})
-```
-
-Run it again and nothing happens. Add `0.0.3` and only that one runs.
-
-## Documentation
-
-Runnable examples and the full API:
-[santoku.dev](https://santoku.dev/#santoku-sqlite-migrate).
-
-## Tests
-
-The tests are the spec. For the exhaustive surface (ordering, idempotence, rollback,
-validation), read them:
-[`test/spec/santoku/sqlite/migrate.lua`](test/spec/santoku/sqlite/migrate.lua).
-
-## License
-
-MIT, see [LICENSE](LICENSE).
-
-## More examples
-
-```lua
 local test = require("santoku.test")
 
 local err = require("santoku.error")
@@ -96,4 +45,3 @@ test("only new migrations run on later passes", function ()
   })
   assert(teq(db.all("select n from d order by n", true)(), { { n = 1 }, { n = 2 } }))
 end)
-```
