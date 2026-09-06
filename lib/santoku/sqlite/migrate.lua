@@ -1,11 +1,12 @@
 local arr = require("santoku.array")
+local str = require("santoku.string")
 local amap = arr.map
 local asort = arr.sort
 
 local tbl = require("santoku.table")
 local tkeys = tbl.keys
 
-local sbyte = string.byte
+local sbyte = str.byte
 
 local function isdigit (s, i)
   local c = sbyte(s, i)

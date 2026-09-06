@@ -1,6 +1,6 @@
 local env = {
   name = "santoku-sqlite-migrate",
-  version = "2.0.1-1",
+  version = "2.0.2-1",
   variable_prefix = "TK_SQLITE_MIGRATE",
   license = "MIT",
   public = true,
